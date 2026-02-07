@@ -99,6 +99,22 @@ export interface DashboardStats {
   }[];
 }
 
+// Auxiliary Product Category
+export type AuxProductCategory = 'lubricant' | 'car_care' | 'additive';
+
+export interface AuxProduct {
+  id: string;
+  name: string;
+  category: AuxProductCategory;
+  unit: string;
+  buyPrice: number;
+  sellPrice: number;
+  stock: number;
+  minStock: number;
+  status: 'active' | 'inactive';
+  description?: string;
+}
+
 // Report
 export interface RevenueReport {
   date: string;

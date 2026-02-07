@@ -12,6 +12,7 @@ import Shifts from "@/pages/Shifts";
 import Reports from "@/pages/Reports";
 import Fuels from "@/pages/Fuels";
 import Employees from "@/pages/Employees";
+import Accessories from "@/pages/Accessories";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
 
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/reports" element={<Reports />} />
             <Route path="/fuels" element={<Fuels />} />
             <Route path="/employees" element={<Employees />} />
+            <Route path="/accessories" element={<Accessories />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<NotFound />} />

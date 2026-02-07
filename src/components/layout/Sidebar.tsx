@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Droplets,
   AlertTriangle,
+  ShoppingBag,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ const mainNavItems: NavItem[] = [
   { title: 'Tồn kho', href: '/inventory', icon: Droplets },
   { title: 'Ca làm việc', href: '/shifts', icon: Clock },
   { title: 'Báo cáo', href: '/reports', icon: BarChart3 },
+  { title: 'Hàng phụ trợ', href: '/accessories', icon: ShoppingBag },
 ];
 
 const settingsNavItems: NavItem[] = [
