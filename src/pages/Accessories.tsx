@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Plus, Search, Package, Edit2, Trash2, Filter } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,7 +53,16 @@ const emptyProduct: Omit<AuxProduct, 'id'> = {
   description: '',
 };
 
+const categoryFromParam: Record<string, AuxProductCategory> = {
+  lubricant: 'lubricant',
+  'car-care': 'car_care',
+  additive: 'additive',
+};
+
 export default function Accessories() {
+  const { category: categoryParam } = useParams<{ category?: string }>();
+  const urlCategory = categoryParam ? categoryFromParam[categoryParam] : undefined;
+
   const [products, setProducts] = useState<AuxProduct[]>(initialProducts);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -60,25 +70,31 @@ export default function Accessories() {
   const [editingProduct, setEditingProduct] = useState<AuxProduct | null>(null);
   const [form, setForm] = useState<Omit<AuxProduct, 'id'>>(emptyProduct);
 
+  // Determine effective category: URL param takes priority, then dropdown filter
+  const effectiveCategory = urlCategory || (categoryFilter !== 'all' ? categoryFilter : undefined);
+
   const filtered = useMemo(() => {
     return products.filter((p) => {
       const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
-      const matchCategory = categoryFilter === 'all' || p.category === categoryFilter;
+      const matchCategory = !effectiveCategory || p.category === effectiveCategory;
       return matchSearch && matchCategory;
     });
-  }, [products, search, categoryFilter]);
+  }, [products, search, effectiveCategory]);
 
   const stats = useMemo(() => {
-    const totalProducts = products.length;
-    const totalValue = products.reduce((s, p) => s + p.sellPrice * p.stock, 0);
-    const lowStock = products.filter((p) => p.stock <= p.minStock && p.status === 'active').length;
-    const activeProducts = products.filter((p) => p.status === 'active').length;
+    const relevantProducts = effectiveCategory
+      ? products.filter((p) => p.category === effectiveCategory)
+      : products;
+    const totalProducts = relevantProducts.length;
+    const totalValue = relevantProducts.reduce((s, p) => s + p.sellPrice * p.stock, 0);
+    const lowStock = relevantProducts.filter((p) => p.stock <= p.minStock && p.status === 'active').length;
+    const activeProducts = relevantProducts.filter((p) => p.status === 'active').length;
     return { totalProducts, totalValue, lowStock, activeProducts };
-  }, [products]);
+  }, [products, effectiveCategory]);
 
   const handleOpenAdd = () => {
     setEditingProduct(null);
-    setForm(emptyProduct);
+    setForm({ ...emptyProduct, category: urlCategory || 'lubricant' });
     setDialogOpen(true);
   };
 
@@ -123,9 +139,13 @@ export default function Accessories() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Hàng phụ trợ</h1>
+          <h1 className="text-2xl font-bold text-foreground">
+            {urlCategory ? categoryLabels[urlCategory] : 'Hàng phụ trợ'}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Quản lý dầu nhờn, nước chăm sóc xe, phụ gia & hoá chất
+            {urlCategory
+              ? `Quản lý sản phẩm danh mục ${categoryLabels[urlCategory].toLowerCase()}`
+              : 'Quản lý dầu nhờn, nước chăm sóc xe, phụ gia & hoá chất'}
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -286,18 +306,20 @@ export default function Accessories() {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[200px]">
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Lọc danh mục" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả danh mục</SelectItem>
-                  <SelectItem value="lubricant">Dầu nhờn – Mỡ bôi trơn</SelectItem>
-                  <SelectItem value="car_care">Nước & dung dịch chăm sóc</SelectItem>
-                  <SelectItem value="additive">Phụ gia & hoá chất</SelectItem>
-                </SelectContent>
-              </Select>
+              {!urlCategory && (
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-[200px]">
+                    <Filter className="mr-2 h-4 w-4" />
+                    <SelectValue placeholder="Lọc danh mục" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả danh mục</SelectItem>
+                    <SelectItem value="lubricant">Dầu nhờn – Mỡ bôi trơn</SelectItem>
+                    <SelectItem value="car_care">Nước & dung dịch chăm sóc</SelectItem>
+                    <SelectItem value="additive">Phụ gia & hoá chất</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
         </CardHeader>

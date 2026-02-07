@@ -11,9 +11,13 @@ import {
   Users,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Droplets,
   AlertTriangle,
   ShoppingBag,
+  Droplet,
+  SprayCan,
+  FlaskConical,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -24,6 +28,7 @@ interface NavItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: number;
+  children?: NavItem[];
 }
 
 const mainNavItems: NavItem[] = [
@@ -33,7 +38,16 @@ const mainNavItems: NavItem[] = [
   { title: 'Tồn kho', href: '/inventory', icon: Droplets },
   { title: 'Ca làm việc', href: '/shifts', icon: Clock },
   { title: 'Báo cáo', href: '/reports', icon: BarChart3 },
-  { title: 'Hàng phụ trợ', href: '/accessories', icon: ShoppingBag },
+  {
+    title: 'Hàng phụ trợ',
+    href: '/accessories',
+    icon: ShoppingBag,
+    children: [
+      { title: 'Dầu nhờn – Mỡ bôi trơn', href: '/accessories/lubricant', icon: Droplet },
+      { title: 'Nước & dung dịch', href: '/accessories/car-care', icon: SprayCan },
+      { title: 'Phụ gia & hoá chất', href: '/accessories/additive', icon: FlaskConical },
+    ],
+  },
 ];
 
 const settingsNavItems: NavItem[] = [
@@ -45,10 +59,82 @@ const settingsNavItems: NavItem[] = [
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    '/accessories': location.pathname.startsWith('/accessories'),
+  });
 
-  const NavItemComponent = ({ item }: { item: NavItem }) => {
+  const toggleGroup = (href: string) => {
+    setOpenGroups((prev) => ({ ...prev, [href]: !prev[href] }));
+  };
+
+  const NavItemComponent = ({ item, depth = 0 }: { item: NavItem; depth?: number }) => {
     const isActive = location.pathname === item.href;
+    const hasChildren = item.children && item.children.length > 0;
+    const isGroupActive = hasChildren && location.pathname.startsWith(item.href);
+    const isOpen = openGroups[item.href] || isGroupActive;
     const Icon = item.icon;
+
+    if (hasChildren) {
+      const groupContent = (
+        <div>
+          <button
+            onClick={() => toggleGroup(item.href)}
+            className={cn(
+              'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
+              'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+              isGroupActive
+                ? 'text-sidebar-primary-foreground bg-sidebar-primary/80'
+                : 'text-sidebar-foreground/70'
+            )}
+          >
+            <Icon className={cn('h-5 w-5 shrink-0', isGroupActive && 'text-sidebar-primary-foreground')} />
+            {!collapsed && (
+              <>
+                <span className="truncate flex-1 text-left">{item.title}</span>
+                <ChevronDown
+                  className={cn(
+                    'h-4 w-4 shrink-0 transition-transform duration-200',
+                    isOpen && 'rotate-180'
+                  )}
+                />
+              </>
+            )}
+          </button>
+          {!collapsed && isOpen && (
+            <div className="ml-4 mt-1 space-y-0.5 border-l border-sidebar-border pl-2">
+              {item.children!.map((child) => (
+                <NavItemComponent key={child.href} item={child} depth={depth + 1} />
+              ))}
+            </div>
+          )}
+        </div>
+      );
+
+      if (collapsed) {
+        return (
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>{groupContent}</TooltipTrigger>
+            <TooltipContent side="right" className="space-y-1">
+              <p className="font-medium">{item.title}</p>
+              {item.children!.map((child) => (
+                <NavLink
+                  key={child.href}
+                  to={child.href}
+                  className={cn(
+                    'block rounded px-2 py-1 text-xs hover:bg-accent',
+                    location.pathname === child.href && 'font-semibold text-primary'
+                  )}
+                >
+                  {child.title}
+                </NavLink>
+              ))}
+            </TooltipContent>
+          </Tooltip>
+        );
+      }
+
+      return groupContent;
+    }
 
     const linkContent = (
       <NavLink
@@ -56,12 +142,15 @@ export function Sidebar() {
         className={cn(
           'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
           'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+          depth > 0 ? 'py-2 text-[13px]' : '',
           isActive
-            ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-md'
+            ? depth > 0
+              ? 'bg-sidebar-primary/90 text-sidebar-primary-foreground shadow-sm'
+              : 'bg-sidebar-primary text-sidebar-primary-foreground shadow-md'
             : 'text-sidebar-foreground/70'
         )}
       >
-        <Icon className={cn('h-5 w-5 shrink-0', isActive && 'text-sidebar-primary-foreground')} />
+        <Icon className={cn('h-5 w-5 shrink-0', depth > 0 && 'h-4 w-4', isActive && 'text-sidebar-primary-foreground')} />
         {!collapsed && <span className="truncate">{item.title}</span>}
         {!collapsed && item.badge && (
           <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
@@ -71,7 +160,7 @@ export function Sidebar() {
       </NavLink>
     );
 
-    if (collapsed) {
+    if (collapsed && depth === 0) {
       return (
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
