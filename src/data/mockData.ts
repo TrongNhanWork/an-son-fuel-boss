@@ -1,4 +1,4 @@
-import { Fuel, StorageTank, Pump, Transaction, Shift, Employee, ImportRecord, DashboardStats } from '@/types';
+import { Fuel, StorageTank, Pump, Transaction, Shift, Employee, ImportRecord, DashboardStats, AuxProduct } from '@/types';
 
 export const fuels: Fuel[] = [
   { id: '1', name: 'Xăng RON 95-III', type: 'RON95', price: 23650, unit: 'lít', status: 'active', color: 'primary' },
@@ -65,6 +65,30 @@ export const dashboardStats: DashboardStats = {
     { fuelType: 'DO', level: 12800, maxCapacity: 15000, percentage: 85.3 },
   ],
 };
+
+export const auxProducts: AuxProduct[] = [
+  // Dầu nhờn – Mỡ bôi trơn
+  { id: 'aux-1', name: 'Nhớt xe máy Castrol 4T 0.8L', category: 'lubricant', unit: 'chai', buyPrice: 55000, sellPrice: 75000, stock: 48, minStock: 10, status: 'active', description: 'Nhớt xe máy 4 thì, SAE 20W-40' },
+  { id: 'aux-2', name: 'Nhớt xe ga Castrol Scooter 0.8L', category: 'lubricant', unit: 'chai', buyPrice: 62000, sellPrice: 85000, stock: 30, minStock: 10, status: 'active', description: 'Chuyên dụng cho xe tay ga' },
+  { id: 'aux-3', name: 'Nhớt hộp số xe máy Shell Advance', category: 'lubricant', unit: 'chai', buyPrice: 35000, sellPrice: 50000, stock: 20, minStock: 5, status: 'active' },
+  { id: 'aux-4', name: 'Nhớt ô tô Mobil Super 4L', category: 'lubricant', unit: 'can', buyPrice: 380000, sellPrice: 480000, stock: 12, minStock: 5, status: 'active', description: 'SAE 5W-30, phù hợp xe đời mới' },
+  { id: 'aux-5', name: 'Dầu phanh DOT 3 Prestone 300ml', category: 'lubricant', unit: 'chai', buyPrice: 42000, sellPrice: 60000, stock: 15, minStock: 5, status: 'active' },
+  { id: 'aux-6', name: 'Mỡ bò bôi trơn SKF 500g', category: 'lubricant', unit: 'hũ', buyPrice: 75000, sellPrice: 110000, stock: 8, minStock: 3, status: 'active' },
+  { id: 'aux-7', name: 'Xịt bôi trơn sên Motul C2 400ml', category: 'lubricant', unit: 'chai', buyPrice: 95000, sellPrice: 135000, stock: 10, minStock: 5, status: 'active' },
+  { id: 'aux-8', name: 'Dung dịch vệ sinh kim phun 3M', category: 'lubricant', unit: 'chai', buyPrice: 120000, sellPrice: 165000, stock: 6, minStock: 3, status: 'active' },
+  // Nước & dung dịch chăm sóc xe
+  { id: 'aux-9', name: 'Nước rửa kính Sonax 1L', category: 'car_care', unit: 'chai', buyPrice: 55000, sellPrice: 78000, stock: 25, minStock: 8, status: 'active' },
+  { id: 'aux-10', name: 'Nước làm mát Coolant Prestone 1L', category: 'car_care', unit: 'chai', buyPrice: 85000, sellPrice: 120000, stock: 18, minStock: 5, status: 'active' },
+  { id: 'aux-11', name: 'Dung dịch rửa xe Karcher 1L', category: 'car_care', unit: 'chai', buyPrice: 95000, sellPrice: 140000, stock: 14, minStock: 5, status: 'active' },
+  { id: 'aux-12', name: 'Dung dịch vệ sinh nội thất 3M', category: 'car_care', unit: 'chai', buyPrice: 110000, sellPrice: 155000, stock: 10, minStock: 3, status: 'active' },
+  { id: 'aux-13', name: 'Chất tẩy nhựa đường Sonax', category: 'car_care', unit: 'chai', buyPrice: 130000, sellPrice: 180000, stock: 7, minStock: 3, status: 'active' },
+  // Phụ gia & hoá chất tiện ích
+  { id: 'aux-14', name: 'Phụ gia xăng STP Octane Booster', category: 'additive', unit: 'chai', buyPrice: 85000, sellPrice: 120000, stock: 12, minStock: 5, status: 'active' },
+  { id: 'aux-15', name: 'Xịt chống rỉ WD-40 333ml', category: 'additive', unit: 'chai', buyPrice: 90000, sellPrice: 130000, stock: 20, minStock: 5, status: 'active' },
+  { id: 'aux-16', name: 'Keo vá lốp nhanh Slime 473ml', category: 'additive', unit: 'chai', buyPrice: 150000, sellPrice: 210000, stock: 8, minStock: 3, status: 'active' },
+  { id: 'aux-17', name: 'Chai bơm vá nhanh Tire Sealant', category: 'additive', unit: 'chai', buyPrice: 65000, sellPrice: 95000, stock: 15, minStock: 5, status: 'active' },
+  { id: 'aux-18', name: 'Dung dịch bịt kín két nước K-Seal', category: 'additive', unit: 'chai', buyPrice: 180000, sellPrice: 250000, stock: 4, minStock: 2, status: 'inactive', description: 'Radiator stop leak' },
+];
 
 export const weeklyRevenue = [
   { date: 'T2', revenue: 145000000, ron95: 2100, e5: 1800, do: 1500 },
