@@ -1,71 +1,264 @@
-import { AlertTriangle, Droplets, ArrowUp, ArrowDown, History } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { useEffect, useState } from "react";
+import {
+  AlertTriangle,
+  Droplets,
+  ArrowDown,
+  History,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { cn } from '@/lib/utils';
-import { storageTanks, fuels, formatNumber, formatCurrency } from '@/data/mockData';
-import { FuelType } from '@/types';
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
-const fuelColors: Record<FuelType, { bg: string; text: string; progress: string }> = {
-  RON95: { bg: 'bg-primary/10', text: 'text-primary', progress: 'bg-primary' },
-  E5: { bg: 'bg-success/10', text: 'text-success', progress: 'bg-success' },
-  DO: { bg: 'bg-secondary/10', text: 'text-secondary', progress: 'bg-secondary' },
+import { cn } from "@/lib/utils";
+import { formatNumber, formatCurrency } from "@/data/mockData";
+import { apiGet, apiPost } from "@/lib/api";
+
+type InventoryItem = {
+  id: number;
+  tankName: string;
+  fuelName: string;
+  currentLit: number;
+  capacityLit: number;
+  lowLevelLit: number;
+  inventoryValue: number;
+};
+
+type InventoryHistory = {
+  id: number;
+  tankId: number;
+  tankName: string;
+  changeType: string;
+  quantity: number;
+  createdAt: string;
 };
 
 export default function Inventory() {
-  const getFuelName = (type: FuelType) => {
-    return fuels.find((f) => f.type === type)?.name || type;
+  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [showAdjust, setShowAdjust] = useState(false);
+  const [selectedTankId, setSelectedTankId] = useState<number>(0);
+  const [quantity, setQuantity] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
+
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [history, setHistory] = useState<InventoryHistory[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const loadInventory = async () => {
+    try {
+      const res = await apiGet<InventoryItem[]>("/api/inventory");
+      setItems(res);
+    } catch (err) {
+      console.error("Load inventory error:", err);
+    }
   };
 
-  const getFuelPrice = (type: FuelType) => {
-    return fuels.find((f) => f.type === type)?.price || 0;
+  const loadHistory = async () => {
+    try {
+      setHistoryLoading(true);
+      const res = await apiGet<InventoryHistory[]>(
+        "/api/inventory/history"
+      );
+      setHistory(res);
+    } catch (err) {
+      console.error("Load history error:", err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadInventory();
+  }, []);
+
+  const handleAdjust = async () => {
+    if (!selectedTankId || quantity === 0) {
+      alert("Vui lòng chọn bể và nhập số lượng");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      await apiPost("/api/inventory/adjust", {
+        tankId: selectedTankId,
+        quantity: quantity,
+      });
+
+      await loadInventory();
+      setShowAdjust(false);
+      setQuantity(0);
+      setSelectedTankId(0);
+    } catch (err) {
+      console.error(err);
+      alert("Điều chỉnh thất bại");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
+      {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Quản lý tồn kho</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Quản lý tồn kho
+          </h1>
           <p className="text-muted-foreground">
             Theo dõi mức tồn kho các bể chứa nhiên liệu
           </p>
         </div>
+
         <div className="flex gap-3">
-          <Button variant="outline" className="gap-2">
-            <History className="h-4 w-4" />
-            Lịch sử biến động
-          </Button>
-          <Button className="gap-2">
+          {/* HISTORY DIALOG */}
+          <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={loadHistory}
+              >
+                <History className="h-4 w-4" />
+                Lịch sử biến động
+              </Button>
+            </DialogTrigger>
+
+            <DialogContent className="max-w-3xl w-full">
+              <DialogHeader>
+                <DialogTitle>
+                  Lịch sử biến động tồn kho
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="max-h-[400px] overflow-y-auto space-y-2">
+                {historyLoading && <p>Đang tải...</p>}
+
+                {!historyLoading && history.length === 0 && (
+                  <p className="text-muted-foreground">
+                    Chưa có biến động nào
+                  </p>
+                )}
+
+                {history.map((item) => (
+                  <div
+                    key={item.id}
+                    className="border rounded-lg p-3 flex justify-between items-center"
+                  >
+                    <div>
+                      <p className="font-medium">
+                        {item.tankName}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(
+                          item.createdAt
+                        ).toLocaleString()}
+                      </p>
+                    </div>
+
+                    <div
+                      className={`font-bold ${
+                        item.quantity > 0
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {item.quantity > 0 ? "+" : ""}
+                      {formatNumber(item.quantity)} lít
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* ADJUST BUTTON */}
+          <Button
+            className="gap-2"
+            onClick={() => setShowAdjust(!showAdjust)}
+          >
             <ArrowDown className="h-4 w-4" />
             Điều chỉnh tồn kho
           </Button>
         </div>
       </div>
 
-      {/* Summary Cards */}
+      {/* ADJUST FORM */}
+      {showAdjust && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Điều chỉnh tồn kho</CardTitle>
+            <CardDescription>
+              Nhập số lít (+ để cộng, - để trừ)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex gap-3 items-end">
+            <select
+              className="border rounded px-3 py-2"
+              value={selectedTankId}
+              onChange={(e) =>
+                setSelectedTankId(Number(e.target.value))
+              }
+            >
+              <option value={0}>Chọn bể</option>
+              {items.map((tank) => (
+                <option key={tank.id} value={tank.id}>
+                  {tank.tankName}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="number"
+              className="border rounded px-3 py-2"
+              placeholder="Số lít (+/-)"
+              value={quantity}
+              onChange={(e) =>
+                setQuantity(Number(e.target.value))
+              }
+            />
+
+            <Button onClick={handleAdjust} disabled={loading}>
+              {loading ? "Đang xử lý..." : "Xác nhận"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* INVENTORY CARDS */}
       <div className="grid gap-4 md:grid-cols-3">
-        {storageTanks.map((tank, index) => {
-          const percentage = (tank.currentLevel / tank.maxCapacity) * 100;
-          const colors = fuelColors[tank.fuelType];
-          const isWarning = tank.currentLevel <= tank.warningLevel;
-          const isCritical = tank.currentLevel <= tank.warningLevel * 0.5;
-          const value = tank.currentLevel * getFuelPrice(tank.fuelType);
+        {items.map((tank, index) => {
+          const percentage =
+            tank.capacityLit > 0
+              ? (tank.currentLit / tank.capacityLit) * 100
+              : 0;
+
+          const isWarning =
+            tank.currentLit <= tank.lowLevelLit;
+          const isCritical =
+            tank.currentLit <= tank.lowLevelLit * 0.5;
 
           return (
             <Card
               key={tank.id}
               className={cn(
-                'relative overflow-hidden animate-fade-in',
-                isWarning && 'border-warning',
-                isCritical && 'border-destructive'
+                "relative overflow-hidden animate-fade-in",
+                isWarning && "border-warning",
+                isCritical && "border-destructive"
               )}
               style={{ animationDelay: `${index * 100}ms` }}
             >
@@ -73,53 +266,72 @@ export default function Inventory() {
                 <div className="absolute top-0 right-0 m-3">
                   <AlertTriangle
                     className={cn(
-                      'h-5 w-5',
-                      isCritical ? 'text-destructive' : 'text-warning'
+                      "h-5 w-5",
+                      isCritical
+                        ? "text-destructive"
+                        : "text-warning"
                     )}
                   />
                 </div>
               )}
+
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
-                  <div className={cn('rounded-lg p-2', colors.bg)}>
-                    <Droplets className={cn('h-5 w-5', colors.text)} />
+                  <div className="rounded-lg p-2 bg-primary/10">
+                    <Droplets className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg">{tank.code}</CardTitle>
-                    <CardDescription>{getFuelName(tank.fuelType)}</CardDescription>
+                    <CardTitle className="text-lg">
+                      {tank.tankName}
+                    </CardTitle>
+                    <CardDescription>
+                      {tank.fuelName}
+                    </CardDescription>
                   </div>
                 </div>
               </CardHeader>
+
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Mức hiện tại</span>
-                    <span className={cn('font-bold', colors.text)}>
+                    <span className="text-muted-foreground">
+                      Mức hiện tại
+                    </span>
+                    <span className="font-bold text-primary">
                       {percentage.toFixed(1)}%
                     </span>
                   </div>
-                  <Progress
-                    value={percentage}
-                    className={cn(
-                      'h-3',
-                      isWarning && '[&>div]:bg-warning',
-                      isCritical && '[&>div]:bg-destructive'
-                    )}
-                  />
+
+                  <Progress value={percentage} />
+
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{formatNumber(tank.currentLevel)} lít</span>
-                    <span>/ {formatNumber(tank.maxCapacity)} lít</span>
+                    <span>
+                      {formatNumber(tank.currentLit)} lít
+                    </span>
+                    <span>
+                      / {formatNumber(tank.capacityLit)} lít
+                    </span>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 pt-2 border-t">
                   <div>
-                    <p className="text-xs text-muted-foreground">Mức cảnh báo</p>
-                    <p className="text-sm font-medium">{formatNumber(tank.warningLevel)} lít</p>
+                    <p className="text-xs text-muted-foreground">
+                      Mức cảnh báo
+                    </p>
+                    <p className="text-sm font-medium">
+                      {formatNumber(tank.lowLevelLit)} lít
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Giá trị tồn</p>
-                    <p className="text-sm font-medium">{formatCurrency(value)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Giá trị tồn
+                    </p>
+                    <p className="text-sm font-medium">
+                      {formatCurrency(
+                        tank.inventoryValue
+                      )}
+                    </p>
                   </div>
                 </div>
 
@@ -127,13 +339,15 @@ export default function Inventory() {
                   <Badge
                     variant="outline"
                     className={cn(
-                      'w-full justify-center',
+                      "w-full justify-center",
                       isCritical
-                        ? 'bg-destructive/10 text-destructive border-destructive/20'
-                        : 'bg-warning/10 text-warning border-warning/20'
+                        ? "bg-destructive/10 text-destructive border-destructive/20"
+                        : "bg-warning/10 text-warning border-warning/20"
                     )}
                   >
-                    {isCritical ? 'Cần nhập hàng gấp!' : 'Dưới mức cảnh báo'}
+                    {isCritical
+                      ? "Cần nhập hàng gấp!"
+                      : "Dưới mức cảnh báo"}
                   </Badge>
                 )}
               </CardContent>
@@ -141,79 +355,6 @@ export default function Inventory() {
           );
         })}
       </div>
-
-      {/* Inventory Movement History */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Biến động tồn kho gần đây</CardTitle>
-          <CardDescription>Lịch sử nhập, xuất và điều chỉnh</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[
-              { type: 'import', tank: 'BE-01', fuel: 'RON95', qty: 10000, time: '2 ngày trước' },
-              { type: 'sale', tank: 'BE-02', fuel: 'E5', qty: -1250, time: '4 giờ trước' },
-              { type: 'adjust', tank: 'BE-03', fuel: 'DO', qty: -50, time: '1 ngày trước' },
-              { type: 'import', tank: 'BE-02', fuel: 'E5', qty: 12000, time: '3 ngày trước' },
-              { type: 'sale', tank: 'BE-01', fuel: 'RON95', qty: -850, time: '6 giờ trước' },
-            ].map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between py-3 border-b last:border-0 animate-fade-in"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={cn(
-                      'flex h-10 w-10 items-center justify-center rounded-lg',
-                      item.type === 'import'
-                        ? 'bg-success/10'
-                        : item.type === 'sale'
-                        ? 'bg-primary/10'
-                        : 'bg-warning/10'
-                    )}
-                  >
-                    {item.type === 'import' ? (
-                      <ArrowUp className="h-5 w-5 text-success" />
-                    ) : (
-                      <ArrowDown
-                        className={cn(
-                          'h-5 w-5',
-                          item.type === 'sale' ? 'text-primary' : 'text-warning'
-                        )}
-                      />
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-medium">
-                      {item.type === 'import'
-                        ? 'Nhập kho'
-                        : item.type === 'sale'
-                        ? 'Bán hàng'
-                        : 'Điều chỉnh hao hụt'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {item.tank} • {item.fuel}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p
-                    className={cn(
-                      'font-semibold',
-                      item.qty > 0 ? 'text-success' : 'text-foreground'
-                    )}
-                  >
-                    {item.qty > 0 ? '+' : ''}
-                    {formatNumber(item.qty)} lít
-                  </p>
-                  <p className="text-xs text-muted-foreground">{item.time}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

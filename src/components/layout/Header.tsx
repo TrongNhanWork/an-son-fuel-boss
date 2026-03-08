@@ -1,6 +1,7 @@
-import { Bell, Search, User, LogOut } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Bell, Search, User, LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,11 +9,41 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { apiGet } from "@/lib/api";
 
 export function Header() {
+  const nav = useNavigate();
+  const { logout, username, fullName, role } = useAuth();
+
+  async function onMe() {
+    try {
+      const me = await apiGet<{ id: string; username: string; fullName: string; role: string }>("/api/auth/me");
+      alert(`Tài khoản:\n- Username: ${me.username}\n- Họ tên: ${me.fullName}\n- Role: ${me.role}\n- Id: ${me.id}`);
+    } catch (e: any) {
+      alert(e?.message ?? "Không lấy được thông tin cá nhân");
+    }
+  }
+
+  function onLogout() {
+    logout();
+    nav("/login", { replace: true });
+  }
+
+  const displayName = fullName || username || "User";
+  const displayRole =
+    role === "Manager" ? "Quản lý" : role === "Cashier" ? "Thu ngân" : role === "Warehouse" ? "Kho" : "";
+
+  const initials = (displayName || "U")
+    .split(" ")
+    .filter(Boolean)
+    .slice(-2)
+    .map((s) => s[0]?.toUpperCase())
+    .join("") || "U";
+
   return (
     <header className="flex h-16 items-center justify-between border-b bg-card px-6">
       {/* Search */}
@@ -27,7 +58,7 @@ export function Header() {
 
       {/* Right side */}
       <div className="flex items-center gap-4">
-        {/* Current Shift Info */}
+        {/* Current Shift Info (tạm hardcode, sau nối API) */}
         <div className="flex items-center gap-2 rounded-lg bg-success/10 px-3 py-1.5">
           <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
           <span className="text-sm font-medium text-success">Ca đang mở</span>
@@ -48,21 +79,7 @@ export function Header() {
             <DropdownMenuSeparator />
             <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
               <span className="font-medium">Cảnh báo tồn kho thấp</span>
-              <span className="text-xs text-muted-foreground">
-                Bể chứa E5 còn 32.8% dung tích
-              </span>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
-              <span className="font-medium">Trụ bơm TRU-04 bảo trì</span>
-              <span className="text-xs text-muted-foreground">
-                Đang trong trạng thái bảo trì
-              </span>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
-              <span className="font-medium">Ca mới bắt đầu</span>
-              <span className="text-xs text-muted-foreground">
-                Trần Thị Bình đã mở ca lúc 06:00
-              </span>
+              <span className="text-xs text-muted-foreground">Bể chứa E5 còn 32.8% dung tích</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -73,24 +90,25 @@ export function Header() {
             <Button variant="ghost" className="flex items-center gap-2 px-2">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                  NV
+                  {initials}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col items-start">
-                <span className="text-sm font-medium">Nguyễn Văn An</span>
-                <span className="text-[10px] text-muted-foreground">Quản lý</span>
+                <span className="text-sm font-medium">{displayName}</span>
+                <span className="text-[10px] text-muted-foreground">{displayRole}</span>
               </div>
             </Button>
           </DropdownMenuTrigger>
+
           <DropdownMenuContent align="end" className="w-56 bg-popover">
             <DropdownMenuLabel>Tài khoản của tôi</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={onMe}>
               <User className="mr-2 h-4 w-4" />
               Thông tin cá nhân
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">
+            <DropdownMenuItem className="text-destructive" onClick={onLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               Đăng xuất
             </DropdownMenuItem>

@@ -1,0 +1,17 @@
+@backend_AnSonFuelBoss_HostAddress = http://localhost:5153
+
+GET {{backend_AnSonFuelBoss_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+### GET current shift
+GET http://localhost:5153/api/shifts/current
+Accept: application/json
+
+### POST open shift
+POST http://localhost:5153/api/shifts/open
+Content-Type: application/json
+
+{
+  "openingCash": 500000
+}

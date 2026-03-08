@@ -1,286 +1,200 @@
-import { useState } from 'react';
-import { Plus, Search, Filter, Download, CreditCard, Banknote } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
-import { recentTransactions, pumps, fuels, formatCurrency } from '@/data/mockData';
-import { FuelType } from '@/types';
+import { useEffect, useMemo, useState } from "react";
+import { apiGet, apiPost } from "@/lib/api";
+import { formatCurrency, formatNumber } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
-const fuelBadgeStyles: Record<FuelType, string> = {
-  RON95: 'bg-primary/10 text-primary border-primary/20',
-  E5: 'bg-success/10 text-success border-success/20',
-  DO: 'bg-secondary/10 text-secondary border-secondary/20',
+type FuelDto = { id: number; name: string; unitPrice: number; active: boolean };
+
+type PumpDto = {
+  id: number;
+  code: string;
+  active: boolean;
+  fuelId: number;
+  tankId?: number | null;
+  fuel?: FuelDto | null;
+};
+
+type TankDto = {
+  id: number;
+  name: string;
+  capacityLit: number;
+  currentLit: number;
+  lowLevelLit: number;
+  fuelId: number;
+  fuel?: FuelDto | null;
+};
+
+type CreateSaleRequest = {
+  pumpId: number;
+  liters: number;
+};
+
+type SaleDto = {
+  id: number;
+  code: string;
+  createdAt: string;
+  shiftId: number;
+  pumpId: number;
+  fuelId: number;
+  tankId: number;
+  liters: number;
+  unitPrice: number;
+  totalAmount: number;
 };
 
 export default function Sales() {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedPump, setSelectedPump] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer'>('cash');
+  const [pumps, setPumps] = useState<PumpDto[]>([]);
+  const [tanks, setTanks] = useState<TankDto[]>([]);
+  const [pumpId, setPumpId] = useState<number | "">("");
+  const [liters, setLiters] = useState<number>(10);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [lastSale, setLastSale] = useState<SaleDto | null>(null);
 
-  const formatDateTime = (date: Date) => {
-    return new Intl.DateTimeFormat('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
-  };
+  async function loadBase() {
+    const [p, t] = await Promise.all([
+      apiGet<PumpDto[]>("/api/pumps"),
+      apiGet<TankDto[]>("/api/tanks"),
+    ]);
+    setPumps(p);
+    setTanks(t);
+  }
 
-  const getPumpCode = (pumpId: string) => {
-    return pumps.find((p) => p.id === pumpId)?.code || pumpId;
-  };
+  useEffect(() => {
+    loadBase().catch((e: any) => setErr(e?.message ?? "Load failed"));
+  }, []);
 
-  const selectedPumpData = pumps.find((p) => p.id === selectedPump);
-  const selectedFuel = fuels.find((f) => f.type === selectedPumpData?.fuelType);
-  const totalAmount = selectedFuel && quantity ? selectedFuel.price * parseFloat(quantity) : 0;
+  const selectedPump = useMemo(
+    () => pumps.find((x) => x.id === pumpId) ?? null,
+    [pumps, pumpId]
+  );
+
+  const selectedTank = useMemo(() => {
+    if (!selectedPump?.tankId) return null;
+    return tanks.find((t) => t.id === selectedPump.tankId) ?? null;
+  }, [selectedPump, tanks]);
+
+  const preview = useMemo(() => {
+    const unit = selectedPump?.fuel?.unitPrice ?? 0;
+    const total = unit * (liters || 0);
+    return { unit, total };
+  }, [selectedPump, liters]);
+
+  async function onSell() {
+    try {
+      setErr(null);
+      setMsg(null);
+      setLastSale(null);
+
+      if (!pumpId) {
+        setErr("Chọn trụ bơm trước.");
+        return;
+      }
+      if (!liters || liters <= 0) {
+        setErr("Số lít phải > 0.");
+        return;
+      }
+
+      setLoading(true);
+
+      const sale = await apiPost<SaleDto>("/api/sales", {
+        pumpId,
+        liters,
+      } satisfies CreateSaleRequest);
+
+      setLastSale(sale);
+      setMsg(`Bán thành công: ${sale.code}`);
+
+      // reload tanks để cập nhật tồn bồn sau khi trừ
+      const t = await apiGet<TankDto[]>("/api/tanks");
+      setTanks(t);
+    } catch (e: any) {
+      setErr(e?.message ?? "Sell failed");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Quản lý bán hàng</h1>
-          <p className="text-muted-foreground">
-            Theo dõi và ghi nhận giao dịch bán nhiên liệu
-          </p>
-        </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Giao dịch mới
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px] bg-card">
-            <DialogHeader>
-              <DialogTitle>Tạo giao dịch mới</DialogTitle>
-              <DialogDescription>
-                Ghi nhận giao dịch bán nhiên liệu từ trụ bơm
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="pump">Trụ bơm</Label>
-                <Select value={selectedPump} onValueChange={setSelectedPump}>
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="Chọn trụ bơm" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    {pumps
-                      .filter((p) => p.status === 'active')
-                      .map((pump) => (
-                        <SelectItem key={pump.id} value={pump.id}>
-                          {pump.code} - {pump.fuelType}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {selectedPumpData && (
-                <div className="rounded-lg bg-muted/50 p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Loại nhiên liệu</span>
-                    <Badge className={cn(fuelBadgeStyles[selectedPumpData.fuelType])}>
-                      {selectedPumpData.fuelType}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Đơn giá</span>
-                    <span className="font-semibold">{formatCurrency(selectedFuel?.price || 0)}/lít</span>
-                  </div>
-                </div>
-              )}
-
-              <div className="grid gap-2">
-                <Label htmlFor="quantity">Số lượng (lít)</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  placeholder="Nhập số lít"
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                  className="bg-background"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label>Phương thức thanh toán</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    type="button"
-                    variant={paymentMethod === 'cash' ? 'default' : 'outline'}
-                    className="gap-2"
-                    onClick={() => setPaymentMethod('cash')}
-                  >
-                    <Banknote className="h-4 w-4" />
-                    Tiền mặt
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={paymentMethod === 'transfer' ? 'default' : 'outline'}
-                    className="gap-2"
-                    onClick={() => setPaymentMethod('transfer')}
-                  >
-                    <CreditCard className="h-4 w-4" />
-                    Chuyển khoản
-                  </Button>
-                </div>
-              </div>
-
-              {totalAmount > 0 && (
-                <div className="rounded-lg bg-primary/5 border border-primary/20 p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Thành tiền</span>
-                    <span className="text-2xl font-bold text-primary">
-                      {formatCurrency(totalAmount)}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Hủy
-              </Button>
-              <Button onClick={() => setIsDialogOpen(false)}>
-                Xác nhận giao dịch
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Bán hàng</h1>
+        <p className="text-muted-foreground">Chọn trụ bơm, nhập số lít và tạo giao dịch.</p>
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Tìm kiếm giao dịch..."
-            className="pl-10"
+      {err && <div className="rounded-lg border p-3 text-red-500">{err}</div>}
+      {msg && <div className="rounded-lg border p-3 text-green-600">{msg}</div>}
+
+      <div className="rounded-xl border bg-card p-6 shadow-card space-y-4">
+        {/* chọn trụ */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Trụ bơm</label>
+          <select
+            className="w-full rounded-md border bg-background p-2"
+            value={pumpId}
+            onChange={(e) => setPumpId(e.target.value ? Number(e.target.value) : "")}
+          >
+            <option value="">-- Chọn trụ --</option>
+            {pumps.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.code} • {p.fuel?.name ?? `FuelId=${p.fuelId}`} •{" "}
+                {p.active ? "Đang hoạt động" : "Tạm ngưng"}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* nhập liters */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Số lít</label>
+          <input
+            type="number"
+            className="w-full rounded-md border bg-background p-2"
+            value={liters}
+            min={1}
+            onChange={(e) => setLiters(Number(e.target.value))}
           />
         </div>
-        <Select defaultValue="all">
-          <SelectTrigger className="w-[180px] bg-background">
-            <SelectValue placeholder="Loại nhiên liệu" />
-          </SelectTrigger>
-          <SelectContent className="bg-popover">
-            <SelectItem value="all">Tất cả</SelectItem>
-            <SelectItem value="RON95">RON 95</SelectItem>
-            <SelectItem value="E5">E5</SelectItem>
-            <SelectItem value="DO">Dầu DO</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select defaultValue="all">
-          <SelectTrigger className="w-[180px] bg-background">
-            <SelectValue placeholder="Thanh toán" />
-          </SelectTrigger>
-          <SelectContent className="bg-popover">
-            <SelectItem value="all">Tất cả</SelectItem>
-            <SelectItem value="cash">Tiền mặt</SelectItem>
-            <SelectItem value="transfer">Chuyển khoản</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button variant="outline" className="gap-2">
-          <Filter className="h-4 w-4" />
-          Lọc
-        </Button>
-        <Button variant="outline" className="gap-2">
-          <Download className="h-4 w-4" />
-          Xuất Excel
+
+        {/* preview */}
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-lg border p-3">
+            <div className="text-xs text-muted-foreground">Đơn giá</div>
+            <div className="font-semibold">{formatCurrency(preview.unit)}</div>
+          </div>
+          <div className="rounded-lg border p-3">
+            <div className="text-xs text-muted-foreground">Thành tiền</div>
+            <div className="font-semibold">{formatCurrency(preview.total)}</div>
+          </div>
+          <div className="rounded-lg border p-3">
+            <div className="text-xs text-muted-foreground">Tồn bồn hiện tại</div>
+            <div className="font-semibold">
+              {selectedTank ? `${formatNumber(selectedTank.currentLit)} lít` : "—"}
+            </div>
+            {selectedTank && (
+              <div className="text-xs text-muted-foreground">
+                {selectedTank.name} / {formatNumber(selectedTank.capacityLit)} lít
+              </div>
+            )}
+          </div>
+        </div>
+
+        <Button onClick={onSell} disabled={loading}>
+          {loading ? "Đang xử lý..." : "Tạo giao dịch"}
         </Button>
       </div>
 
-      {/* Transactions Table */}
-      <div className="rounded-xl border bg-card shadow-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Thời gian</TableHead>
-              <TableHead>Trụ bơm</TableHead>
-              <TableHead>Nhiên liệu</TableHead>
-              <TableHead className="text-right">Số lượng</TableHead>
-              <TableHead className="text-right">Đơn giá</TableHead>
-              <TableHead className="text-right">Thành tiền</TableHead>
-              <TableHead>Thanh toán</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {recentTransactions.map((transaction, index) => (
-              <TableRow
-                key={transaction.id}
-                className="animate-fade-in"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <TableCell className="font-medium">
-                  {formatDateTime(transaction.timestamp)}
-                </TableCell>
-                <TableCell>
-                  <span className="font-medium">{getPumpCode(transaction.pumpId)}</span>
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant="outline"
-                    className={cn(fuelBadgeStyles[transaction.fuelType])}
-                  >
-                    {transaction.fuelType}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right font-medium">
-                  {transaction.quantity} lít
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatCurrency(transaction.unitPrice)}
-                </TableCell>
-                <TableCell className="text-right font-semibold text-primary">
-                  {formatCurrency(transaction.total)}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      transaction.paymentMethod === 'cash'
-                        ? 'bg-success/10 text-success border-success/20'
-                        : 'bg-primary/10 text-primary border-primary/20'
-                    )}
-                  >
-                    {transaction.paymentMethod === 'cash' ? 'Tiền mặt' : 'Chuyển khoản'}
-                  </Badge>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      {/* kết quả sale */}
+      {lastSale && (
+        <div className="rounded-xl border bg-card p-6 shadow-card space-y-2">
+          <h3 className="font-semibold">Kết quả giao dịch</h3>
+          <div className="text-sm text-muted-foreground">Mã: {lastSale.code}</div>
+          <div className="text-sm">Số lít: {lastSale.liters}</div>
+          <div className="text-sm">Đơn giá: {formatCurrency(lastSale.unitPrice)}</div>
+          <div className="text-sm font-semibold">Tổng: {formatCurrency(lastSale.totalAmount)}</div>
+        </div>
+      )}
     </div>
   );
 }
