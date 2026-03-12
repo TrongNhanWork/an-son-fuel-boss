@@ -19,29 +19,53 @@ public class DashboardController : ControllerBase
         var todayStart = DateTime.UtcNow.Date;
         var yesterdayStart = todayStart.AddDays(-1);
 
-        // ===== TODAY =====
-        var revenueToday = await _db.Sales.AsNoTracking()
+        // ===== TODAY FUEL =====
+        var fuelRevenueToday = await _db.Sales.AsNoTracking()
             .Where(s => s.CreatedAt >= todayStart)
             .SumAsync(s => (decimal?)s.TotalAmount) ?? 0;
 
-        var transactionsToday = await _db.Sales.AsNoTracking()
+        var fuelTransactionsToday = await _db.Sales.AsNoTracking()
             .CountAsync(s => s.CreatedAt >= todayStart);
 
         var litersToday = await _db.Sales.AsNoTracking()
             .Where(s => s.CreatedAt >= todayStart)
             .SumAsync(s => (decimal?)s.TotalLit) ?? 0;
 
-        // ===== YESTERDAY =====
-        var revenueYesterday = await _db.Sales.AsNoTracking()
+        // ===== TODAY ACCESSORY =====
+        var accessoryRevenueToday = await _db.AccessorySales.AsNoTracking()
+            .Where(a => a.CreatedAt >= todayStart)
+            .SumAsync(a => (decimal?)a.TotalAmount) ?? 0;
+
+        var accessoryTransactionsToday = await _db.AccessorySales.AsNoTracking()
+            .CountAsync(a => a.CreatedAt >= todayStart);
+
+        // ===== TOTAL TODAY =====
+        var revenueToday = fuelRevenueToday + accessoryRevenueToday;
+        var transactionsToday = fuelTransactionsToday + accessoryTransactionsToday;
+
+        // ===== YESTERDAY FUEL =====
+        var fuelRevenueYesterday = await _db.Sales.AsNoTracking()
             .Where(s => s.CreatedAt >= yesterdayStart && s.CreatedAt < todayStart)
             .SumAsync(s => (decimal?)s.TotalAmount) ?? 0;
 
-        var transactionsYesterday = await _db.Sales.AsNoTracking()
+        var fuelTransactionsYesterday = await _db.Sales.AsNoTracking()
             .CountAsync(s => s.CreatedAt >= yesterdayStart && s.CreatedAt < todayStart);
 
         var litersYesterday = await _db.Sales.AsNoTracking()
             .Where(s => s.CreatedAt >= yesterdayStart && s.CreatedAt < todayStart)
             .SumAsync(s => (decimal?)s.TotalLit) ?? 0;
+
+        // ===== YESTERDAY ACCESSORY =====
+        var accessoryRevenueYesterday = await _db.AccessorySales.AsNoTracking()
+            .Where(a => a.CreatedAt >= yesterdayStart && a.CreatedAt < todayStart)
+            .SumAsync(a => (decimal?)a.TotalAmount) ?? 0;
+
+        var accessoryTransactionsYesterday = await _db.AccessorySales.AsNoTracking()
+            .CountAsync(a => a.CreatedAt >= yesterdayStart && a.CreatedAt < todayStart);
+
+        // ===== TOTAL YESTERDAY =====
+        var revenueYesterday = fuelRevenueYesterday + accessoryRevenueYesterday;
+        var transactionsYesterday = fuelTransactionsYesterday + accessoryTransactionsYesterday;
 
         // ===== TÍNH % =====
         decimal CalcPercent(decimal today, decimal yesterday)

@@ -51,7 +51,7 @@ export default function Inventory() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [showAdjust, setShowAdjust] = useState(false);
   const [selectedTankId, setSelectedTankId] = useState<number>(0);
-  const [quantity, setQuantity] = useState<number>(0);
+  const [quantity, setQuantity] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -86,7 +86,9 @@ export default function Inventory() {
   }, []);
 
   const handleAdjust = async () => {
-    if (!selectedTankId || quantity === 0) {
+    const qty = Number(quantity);
+
+    if (!selectedTankId || qty === 0) {
       alert("Vui lòng chọn bể và nhập số lượng");
       return;
     }
@@ -96,12 +98,12 @@ export default function Inventory() {
 
       await apiPost("/api/inventory/adjust", {
         tankId: selectedTankId,
-        quantity: quantity,
+        quantity: qty,
       });
 
       await loadInventory();
       setShowAdjust(false);
-      setQuantity(0);
+      setQuantity("");
       setSelectedTankId(0);
     } catch (err) {
       console.error(err);
@@ -227,9 +229,7 @@ export default function Inventory() {
               className="border rounded px-3 py-2"
               placeholder="Số lít (+/-)"
               value={quantity}
-              onChange={(e) =>
-                setQuantity(Number(e.target.value))
-              }
+              onChange={(e) => setQuantity(e.target.value)}
             />
 
             <Button onClick={handleAdjust} disabled={loading}>

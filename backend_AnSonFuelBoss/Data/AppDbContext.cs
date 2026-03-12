@@ -14,7 +14,11 @@ public class AppDbContext : DbContext
     public DbSet<Sale> Sales => Set<Sale>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Import> Imports { get; set; }
+    public DbSet<Supplier> Suppliers { get; set; }
     public DbSet<InventoryHistory> InventoryHistories { get; set; }
+    public DbSet<AccessoryProduct> AccessoryProducts { get; set; }
+    public DbSet<AccessorySale> AccessorySales { get; set; }
+    public DbSet<FuelPriceHistory> FuelPriceHistories { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Fuel>()

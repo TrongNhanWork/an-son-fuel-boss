@@ -1,22 +1,21 @@
-﻿using backend_AnSonFuelBoss.Models;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-
-public class Import
+﻿namespace backend_AnSonFuelBoss.Models
 {
-    public int Id { get; set; }
+    public class Import
+    {
+        public int Id { get; set; }
 
-    [Required]
-    public int TankId { get; set; }
+        public int TankId { get; set; }
+        public Tank Tank { get; set; }
 
-    [ForeignKey("TankId")]
-    public Tank Tank { get; set; }
+        public int SupplierId { get; set; }
+        public Supplier Supplier { get; set; }
 
-    [Required]
-    public int Quantity { get; set; } // số lít nhập
+        public int Quantity { get; set; }
 
-    [Required]
-    public int UnitPrice { get; set; }
+        public int UnitPrice { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public int TotalPrice { get; set; }
+
+        public DateTime CreatedAt { get; set; }
+    }
 }

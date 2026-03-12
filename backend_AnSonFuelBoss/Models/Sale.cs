@@ -12,6 +12,7 @@ public class Sale
     public int? PumpId { get; set; }
     public Pump? Pump { get; set; }
 
-    public int TotalLit { get; set; }
-    public int TotalAmount { get; set; }
+    public decimal TotalLit { get; set; }
+
+    public decimal TotalAmount { get; set; } // sửa int -> decimal
 }

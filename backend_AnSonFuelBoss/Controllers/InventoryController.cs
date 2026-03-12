@@ -31,8 +31,10 @@ namespace backend_AnSonFuelBoss.Controllers
                     currentLit = t.CurrentLit,
                     capacityLit = t.CapacityLit,
                     lowLevelLit = t.LowLevelLit,
+
+                    // Tính giá trị tồn kho
                     inventoryValue = t.Fuel != null
-                        ? t.CurrentLit * t.Fuel.UnitPrice
+                        ? (decimal)t.CurrentLit * t.Fuel.UnitPrice
                         : 0
                 })
                 .ToListAsync();
@@ -62,12 +64,13 @@ namespace backend_AnSonFuelBoss.Controllers
             if (tank == null)
                 return NotFound("Không tìm thấy bể");
 
-            // Ép decimal -> int
+            // Điều chỉnh tồn
             tank.CurrentLit += (int)request.Quantity;
 
             if (tank.CurrentLit < 0)
                 tank.CurrentLit = 0;
 
+            // Lưu lịch sử
             var history = new InventoryHistory
             {
                 TankId = tank.Id,
@@ -81,7 +84,11 @@ namespace backend_AnSonFuelBoss.Controllers
 
             await _db.SaveChangesAsync();
 
-            return Ok(new { message = "Điều chỉnh thành công" });
+            return Ok(new
+            {
+                message = "Điều chỉnh thành công",
+                currentLit = tank.CurrentLit
+            });
         }
     }
 }

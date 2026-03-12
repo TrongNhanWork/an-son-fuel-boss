@@ -6,9 +6,10 @@ public class SaleRecentDto
     public string Code { get; set; } = "";
     public DateTime CreatedAt { get; set; }
 
-    public int Liters { get; set; }
-    public int UnitPrice { get; set; }
-    public int TotalAmount { get; set; }
+    public decimal Liters { get; set; }
+    public decimal UnitPrice { get; set; }   // sửa int -> decimal
+
+    public decimal TotalAmount { get; set; } // sửa int -> decimal
 
     public int PumpId { get; set; }
     public string PumpCode { get; set; } = "";

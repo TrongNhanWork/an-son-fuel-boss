@@ -4,7 +4,7 @@ public class Fuel
 {
     public int Id { get; set; }
     public string Name { get; set; } = "";
-    public int UnitPrice { get; set; } // VND/lít
+    public decimal UnitPrice { get; set; } // VND/Lít
     public bool Active { get; set; } = true;
 
     //public List<Tank> Tanks { get; set; } = new();

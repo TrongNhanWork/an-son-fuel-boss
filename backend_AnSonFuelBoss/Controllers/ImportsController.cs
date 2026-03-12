@@ -1,4 +1,6 @@
 ﻿using backend_AnSonFuelBoss.Data;
+using backend_AnSonFuelBoss.Dtos;
+using backend_AnSonFuelBoss.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,7 +22,19 @@ public class ImportsController : ControllerBase
         var imports = await _db.Imports
             .Include(i => i.Tank)
             .ThenInclude(t => t.Fuel)
+            .Include(i => i.Supplier)
             .OrderByDescending(i => i.CreatedAt)
+            .Select(i => new
+            {
+                i.Id,
+                tankName = i.Tank.Name,
+                fuelTypeName = i.Tank.Fuel.Name,
+                quantity = i.Quantity,
+                unitPrice = i.UnitPrice,
+                totalPrice = i.TotalPrice,
+                supplierName = i.Supplier.Name,
+                createdAt = i.CreatedAt
+            })
             .ToListAsync();
 
         return Ok(imports);
@@ -28,20 +42,37 @@ public class ImportsController : ControllerBase
 
     // POST: api/imports
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] Import request)
+    public async Task<IActionResult> Create([FromBody] ImportCreateDto dto)
     {
         var tank = await _db.Tanks
-            .FirstOrDefaultAsync(t => t.Id == request.TankId);
+            .FirstOrDefaultAsync(t => t.Id == dto.TankId);
 
         if (tank == null)
             return BadRequest("Không tìm thấy bể chứa");
 
-        // 🔥 CẬP NHẬT TỒN KHO
-        tank.CurrentLit += request.Quantity;
+        var supplier = await _db.Suppliers
+            .FirstOrDefaultAsync(s => s.Id == dto.SupplierId);
 
-        _db.Imports.Add(request);
+        if (supplier == null)
+            return BadRequest("Không tìm thấy nhà cung cấp");
+
+        var import = new Import
+        {
+            TankId = dto.TankId,
+            SupplierId = dto.SupplierId,
+            Quantity = dto.Quantity,
+            UnitPrice = dto.UnitPrice,
+            TotalPrice = dto.Quantity * dto.UnitPrice,
+            CreatedAt = DateTime.Now
+        };
+
+        // 🔥 cập nhật tồn bể
+        tank.CurrentLit += dto.Quantity;
+
+        _db.Imports.Add(import);
+
         await _db.SaveChangesAsync();
 
-        return Ok(request);
+        return Ok(import);
     }
 }

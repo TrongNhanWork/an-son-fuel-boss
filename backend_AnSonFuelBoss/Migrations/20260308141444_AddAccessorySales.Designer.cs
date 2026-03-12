@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using backend_AnSonFuelBoss.Data;
 
@@ -11,9 +12,11 @@ using backend_AnSonFuelBoss.Data;
 namespace backend_AnSonFuelBoss.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260308141444_AddAccessorySales")]
+    partial class AddAccessorySales
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -119,33 +122,6 @@ namespace backend_AnSonFuelBoss.Migrations
                         .IsUnique();
 
                     b.ToTable("Fuels");
-                });
-
-            modelBuilder.Entity("backend_AnSonFuelBoss.Models.FuelPriceHistory", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("ChangedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("FuelId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("NewPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("OldPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FuelId");
-
-                    b.ToTable("FuelPriceHistories");
                 });
 
             modelBuilder.Entity("backend_AnSonFuelBoss.Models.Import", b =>
@@ -417,17 +393,6 @@ namespace backend_AnSonFuelBoss.Migrations
                         .IsRequired();
 
                     b.Navigation("Product");
-                });
-
-            modelBuilder.Entity("backend_AnSonFuelBoss.Models.FuelPriceHistory", b =>
-                {
-                    b.HasOne("backend_AnSonFuelBoss.Models.Fuel", "Fuel")
-                        .WithMany()
-                        .HasForeignKey("FuelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Fuel");
                 });
 
             modelBuilder.Entity("backend_AnSonFuelBoss.Models.Import", b =>

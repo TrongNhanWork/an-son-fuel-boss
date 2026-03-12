@@ -10,7 +10,7 @@ interface ShiftStatusProps {
 }
 
 export function ShiftStatus({ shift }: ShiftStatusProps) {
-  const isOpen = !!shift && shift.status === 0;
+  const isOpen = !!shift && shift.status === "Open";
 
   if (!isOpen) {
     return (

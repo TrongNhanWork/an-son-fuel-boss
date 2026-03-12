@@ -1,7 +1,7 @@
 export type ShiftDto = {
   id: number;
   code: string;
-  status: number; // ✅ đổi string -> number
+  status: string;
   openedAt: string;
   closedAt?: string | null;
   openingCash: number;

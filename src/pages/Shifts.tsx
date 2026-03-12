@@ -7,7 +7,7 @@ import { ShiftDto } from "@/types/shift";
 export default function Shifts() {
   const [shift, setShift] = useState<ShiftDto | null>(null);
   const [openingCash, setOpeningCash] = useState<number>(500000);
-  const [countedCash, setCountedCash] = useState<number>(0);
+  const [countedCash, setCountedCash] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -41,7 +41,8 @@ export default function Shifts() {
       setErr(null);
       setMsg(null);
       setLoading(true);
-      const res = await apiPost<ShiftDto>("/api/shifts/close", { countedCash });
+      const cash = Number(countedCash);
+      const res = await apiPost<ShiftDto>("/api/shifts/close", { countedCash: cash });
       setMsg(`Chốt ca thành công: ${res.code}`);
       setShift(res);
       await load();
@@ -99,7 +100,7 @@ export default function Shifts() {
               type="number"
               className="w-full rounded-md border bg-background p-2"
               value={countedCash}
-              onChange={(e) => setCountedCash(Number(e.target.value))}
+              onChange={(e) => setCountedCash(e.target.value)}
             />
           </div>
 
